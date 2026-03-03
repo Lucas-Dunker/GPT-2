@@ -27,7 +27,7 @@ def main():
     eval_loader = DataLoader(eval_data, eval_batch_size, context_length)
     
     # Model setup
-    d_model = vocab_size
+    d_model = 512
     model = GPT(vocab_size=vocab_size, d_model=d_model).to(device)
     optim = torch.optim.AdamW(model.parameters(), lr=lr)
     

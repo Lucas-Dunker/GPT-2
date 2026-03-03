@@ -6,6 +6,39 @@ from typing import Optional
 from config import context_length
 from tokenizer import CharTokenizer
 
+class SelfAttention(nn.Module):
+    def __init__(self, d_model: int):
+        super().__init__()
+        
+        self.query = nn.Linear(d_model, d_model)
+        self.key = nn.Linear(d_model, d_model)
+        self.value = nn.Linear(d_model, d_model)
+        self.fc_out = nn.Linear(d_model, d_model)
+        self.dropout = nn.Dropout(0.2)
+    
+    def forward(self, inputs: torch.Tensor):
+        B, seq_length, d_model = inputs.shape
+        
+        # Project the input embeddings into Q, K, and V
+        Q = self.query(inputs)
+        K = self.key(inputs)
+        V = self.value(inputs)
+        
+        # Compute attention scores
+        attention_scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_model)
+        
+        # Apply mask to prevent attention to future tokens
+        mask = torch.triu(torch.ones(seq_length, seq_length), diagonal=1).bool().to(inputs.device)
+        attention_scores = attention_scores.masked_fill(mask, float('-inf'))
+        
+        attention_weights = torch.softmax(attention_scores, dim=-1)
+        attention_weights = self.dropout(attention_weights)
+
+        attention_output = torch.matmul(attention_weights, V)
+        out = self.fc_out(attention_output)
+        
+        return out
+
 class PositionalEncoding(nn.Module):
     def __init__(self, context_length, d_model) -> None:
         super().__init__()
@@ -45,15 +78,29 @@ class GPT(nn.Module):
             nn.GELU(),
             nn.Linear(4 * d_model, d_model)
         )
+        self.att = SelfAttention(d_model)
+        self.ln1 = nn.LayerNorm(d_model)
+        self.ln2 = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(0.2)
+        self.linear1 = nn.Linear(d_model, vocab_size)
     
     def forward(self, inputs: torch.Tensor, targets: Optional[torch.Tensor] = None):
         logits = self.wte(inputs)
         logits = self.wpe(logits)
+
+        att_logits = self.att(logits)
+        adn_logits = self.ln1(logits + att_logits)
+
+        logits = self.dropout(adn_logits)
         logits = self.fcn(logits)
+        logits = self.ln2(logits + adn_logits)
+        logits = self.linear1(logits)
+        
+
         loss = None
         if targets is not None:
-            batch_size, sequence_length, d_model = logits.shape
-            logits = logits.view(batch_size * sequence_length, d_model)
+            batch_size, sequence_length, vocab_size = logits.shape
+            logits = logits.view(batch_size * sequence_length, vocab_size)
             targets = targets.view(batch_size * sequence_length)
             loss = F.cross_entropy(logits, targets)
         return logits, loss

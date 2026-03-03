@@ -53,8 +53,8 @@ def main():
         input_tensor = torch.tensor(
             tokenizer.encode("Love"), dtype=torch.long, device=device
         ).unsqueeze(0)
-        output = model.generate(input_tensor, max_new_tokens=500)[0]
-        print(tokenizer.decode(output.tolist()))
+        output = model.generate(input_tensor, max_new_tokens=500, tokenizer=tokenizer)[0]
+        print(output)
 
 
 if __name__ == "__main__":

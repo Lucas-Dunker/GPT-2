@@ -6,6 +6,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Data configuration
 data_dir = "data.txt"
 
+# Model configuration
+context_length = 256
+
 # Training hyperparameters
 train_batch_size = 16
 eval_batch_size = 8

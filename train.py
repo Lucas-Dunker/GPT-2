@@ -2,7 +2,8 @@ import torch
 
 from config import (
     device, data_dir, train_batch_size, eval_batch_size,
-    context_length, train_split, lr, epochs, eval_steps, num_heads
+    context_length, train_split, lr, epochs, eval_steps, num_heads,
+    n_layers
 )
 from tokenizer import CharTokenizer
 from dataloader import DataLoader
@@ -28,7 +29,7 @@ def main():
     
     # Model setup
     d_model = 512
-    model = GPT(vocab_size=vocab_size, d_model=d_model, n_heads=num_heads).to(device)
+    model = GPT(vocab_size=vocab_size, d_model=d_model, n_heads=num_heads, n_layers=n_layers).to(device)
     optim = torch.optim.AdamW(model.parameters(), lr=lr)
     
     # Training loop

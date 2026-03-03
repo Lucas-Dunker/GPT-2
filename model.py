@@ -74,38 +74,45 @@ class PositionalEncoding(nn.Module):
         # Add the positional encodings to the input embeddings
         return x + self.pe[:,:x.size(1), :] 
 
-
-class GPT(nn.Module):
-    """Simple GPT model with token embeddings."""
-    
-    def __init__(self, vocab_size: int, d_model: int, n_heads: int):
+class GPTBlock(nn.Module):
+    def __init__(self, d_model, n_heads):
         super().__init__()
-        self.wte = nn.Embedding(vocab_size, d_model)
-        self.wpe = PositionalEncoding(context_length=context_length, d_model=d_model)
+        self.att = MultiHeadAttention(d_model, n_heads)
+        self.ln1 = nn.LayerNorm(d_model)
+        self.ln2 = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(0.2)
         self.fcn = nn.Sequential(
             nn.Linear(d_model, 4 * d_model),
             nn.GELU(),
             nn.Linear(4 * d_model, d_model)
         )
-        self.att = MultiHeadAttention(d_model, n_heads)
-        self.ln1 = nn.LayerNorm(d_model)
-        self.ln2 = nn.LayerNorm(d_model)
-        self.dropout = nn.Dropout(0.2)
-        self.linear1 = nn.Linear(d_model, vocab_size)
-    
-    def forward(self, inputs: torch.Tensor, targets: Optional[torch.Tensor] = None):
-        logits = self.wte(inputs)
-        logits = self.wpe(logits)
 
+    def forward(self, logits):
         att_logits = self.att(logits)
         adn_logits = self.ln1(logits + att_logits)
-
         logits = self.dropout(adn_logits)
         logits = self.fcn(logits)
         logits = self.ln2(logits + adn_logits)
+        return logits
+
+class GPT(nn.Module):
+    """GPT model based on the implementation paper of GPT2."""
+    
+    def __init__(self, vocab_size: int, d_model: int, n_heads: int, n_layers: int):
+        super().__init__()
+        self.wte = nn.Embedding(vocab_size, d_model) # word token embeddings
+        self.wpe = PositionalEncoding(context_length, d_model) # word position encodings
+        self.blocks = nn.ModuleList([GPTBlock(d_model, n_heads) for _ in  range(n_layers)])
+        self.linear1 = nn.Linear(d_model, vocab_size)
+    
+    def forward(self, inputs: torch.Tensor, targets: Optional[torch.Tensor] = None):
+        logits = self.wte(inputs) # dim -> batch_size, sequence_length, d_model
+        logits = self.wpe(logits)
+        for block in self.blocks:
+            logits = block(logits)
+        logits = self.linear1(logits)
         logits = self.linear1(logits)
         
-
         loss = None
         if targets is not None:
             batch_size, sequence_length, vocab_size = logits.shape

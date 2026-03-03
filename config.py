@@ -9,6 +9,7 @@ data_dir = "data.txt"
 # Model configuration
 context_length = 256
 num_heads = 4 # number of self-attention heads. should be divisible with d_model
+n_layers = 2 # number of gpt blocks/layers
 
 # Training hyperparameters
 train_batch_size = 16

@@ -6,16 +6,18 @@ from config import (
     n_layers
 )
 from tokenizer import CharTokenizer
+import tiktoken
 from dataloader import DataLoader
 from model import GPT
+
 
 
 def main():
     text = open(data_dir, 'r').read()
     
     # Tokenizer setup
-    tokenizer = CharTokenizer(text)
-    vocab_size = tokenizer.vocab_size
+    tokenizer = tiktoken.get_encoding('gpt2')
+    vocab_size = tokenizer.n_vocab
     data = torch.tensor(tokenizer.encode(text), dtype=torch.long, device=device)
     
     # Split data into train and eval

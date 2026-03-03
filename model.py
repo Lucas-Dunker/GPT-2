@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import math
 from typing import Optional
 from config import context_length, num_heads
-from tokenizer import CharTokenizer
+import tiktoken
 
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model: int, num_heads: int):
@@ -111,7 +111,6 @@ class GPT(nn.Module):
         for block in self.blocks:
             logits = block(logits)
         logits = self.linear1(logits)
-        logits = self.linear1(logits)
         
         loss = None
         if targets is not None:
@@ -121,7 +120,7 @@ class GPT(nn.Module):
             loss = F.cross_entropy(logits, targets)
         return logits, loss
     
-    def generate(self, inputs: torch.Tensor, max_new_tokens: int, tokenizer: CharTokenizer):
+    def generate(self, inputs: torch.Tensor, max_new_tokens: int, tokenizer: tiktoken.Encoding):
         """Generate new tokens given an input sequence."""
         """The model output will be stored along with the initial input sequence."""
         output = inputs.clone()

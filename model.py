@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 from typing import Optional
-from config import context_length, num_heads
+from config import context_length
 import tiktoken
 
 class MultiHeadAttention(nn.Module):
@@ -104,6 +104,8 @@ class GPT(nn.Module):
         self.wpe = PositionalEncoding(context_length, d_model) # word position encodings
         self.blocks = nn.ModuleList([GPTBlock(d_model, n_heads) for _ in  range(n_layers)])
         self.linear1 = nn.Linear(d_model, vocab_size)
+
+        self.wte.weight = self.linear1.weight
     
     def forward(self, inputs: torch.Tensor, targets: Optional[torch.Tensor] = None):
         logits = self.wte(inputs) # dim -> batch_size, sequence_length, d_model

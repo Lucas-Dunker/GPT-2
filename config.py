@@ -7,9 +7,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 data_dir = "data.txt"
 
 # Model configuration
-context_length = 256
+context_length = 512
 num_heads = 4 # attention heads, should be divisible with d_model
-n_layers = 2 # number of gpt blocks/layers
+n_layers = 1 # number of gpt blocks/layers
 
 # Training hyperparameters
 train_batch_size = 16
@@ -18,5 +18,5 @@ train_split = 0.8
 
 # Training configuration
 lr = 1e-3
-epochs = 5000
-eval_steps = 1000
+epochs = 3500
+eval_steps = 100

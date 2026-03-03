@@ -3,38 +3,47 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 from typing import Optional
-from config import context_length
+from config import context_length, num_heads
 from tokenizer import CharTokenizer
 
-class SelfAttention(nn.Module):
-    def __init__(self, d_model: int):
+class MultiHeadAttention(nn.Module):
+    def __init__(self, d_model: int, num_heads: int):
         super().__init__()
         
+        self.num_heads = num_heads
+        self.head_dim = d_model // num_heads
+        assert (num_heads * self.head_dim == d_model)
+
         self.query = nn.Linear(d_model, d_model)
         self.key = nn.Linear(d_model, d_model)
         self.value = nn.Linear(d_model, d_model)
         self.fc_out = nn.Linear(d_model, d_model)
         self.dropout = nn.Dropout(0.2)
-    
+
     def forward(self, inputs: torch.Tensor):
         B, seq_length, d_model = inputs.shape
         
         # Project the input embeddings into Q, K, and V
-        Q = self.query(inputs)
-        K = self.key(inputs)
-        V = self.value(inputs)
+        Q = self.query(inputs).view(B, seq_length, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
+        K = self.key(inputs).view(B, seq_length, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
+        V = self.value(inputs).view(B, seq_length, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
         
         # Compute attention scores
-        attention_scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_model)
+        attention_scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.head_dim)
         
         # Apply mask to prevent attention to future tokens
         mask = torch.triu(torch.ones(seq_length, seq_length), diagonal=1).bool().to(inputs.device)
         attention_scores = attention_scores.masked_fill(mask, float('-inf'))
         
         attention_weights = torch.softmax(attention_scores, dim=-1)
-        attention_weights = self.dropout(attention_weights)
+        # Compute the weighted sum of the values
+        attention_output = torch.matmul(self.dropout(attention_weights), V)
 
-        attention_output = torch.matmul(attention_weights, V)
+        # Concatenate heads and put them back to the original shape
+        attention_output = attention_output.permute(0, 2, 1, 3).contiguous()
+        attention_output = attention_output.view(B, seq_length, d_model)
+
+        # Apply the final linear transformation
         out = self.fc_out(attention_output)
         
         return out
@@ -69,7 +78,7 @@ class PositionalEncoding(nn.Module):
 class GPT(nn.Module):
     """Simple GPT model with token embeddings."""
     
-    def __init__(self, vocab_size: int, d_model: int):
+    def __init__(self, vocab_size: int, d_model: int, n_heads: int):
         super().__init__()
         self.wte = nn.Embedding(vocab_size, d_model)
         self.wpe = PositionalEncoding(context_length=context_length, d_model=d_model)
@@ -78,7 +87,7 @@ class GPT(nn.Module):
             nn.GELU(),
             nn.Linear(4 * d_model, d_model)
         )
-        self.att = SelfAttention(d_model)
+        self.att = MultiHeadAttention(d_model, n_heads)
         self.ln1 = nn.LayerNorm(d_model)
         self.ln2 = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(0.2)

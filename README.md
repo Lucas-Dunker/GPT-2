@@ -2,7 +2,10 @@
 
 An implementation of "Language Models are Unsupervised Multitask Learners" by Radford _et al._
 
-![GPT2 Architecture](GPT2_Architecture.webp)
+![GPT2 Architecture](images/GPT2_Architecture.webp)
+![GPT2 Internals](images/Params.png)
+![GPT2 Training](images/Training.png)
+![GPT2 Sample](images/Sample.png)
 
 Resources:
 

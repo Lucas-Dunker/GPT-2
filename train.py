@@ -10,7 +10,6 @@ from dataloader import DataLoader
 from model import GPT
 
 
-
 def main():
     text = open(data_dir, 'r').read()
     
